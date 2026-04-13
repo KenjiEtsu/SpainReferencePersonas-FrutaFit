@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Encaje de precio | Spain Reference Personas</title>
+    <meta
+      name="description"
+      content="Pagina estatica para evaluar el encaje de precio a partir de un dataset de personas."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Space+Grotesk:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Spain Reference Personas</p>
+          <h1>Evaluar si mi precio encaja con este tipo de cliente</h1>
+          <p class="hero-lead">
+            Esta pagina traduce el dataset de personas a una lectura de negocio:
+            donde aparece la friccion por precio, quien necesita mas prueba de
+            valor y que segmentos admiten una propuesta mas premium.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#simulator">Probar escenario</a>
+            <a class="button button-secondary" href="#personas">Explorar personas</a>
+          </div>
+        </div>
+
+        <aside class="hero-panel">
+          <p class="panel-kicker">Lectura rapida</p>
+          <div class="hero-stat">
+            <span class="hero-stat-value" id="heroPersonaCount">--</span>
+            <span class="hero-stat-label">personas analizadas</span>
+          </div>
+          <ul class="signal-list" id="heroSignals"></ul>
+        </aside>
+      </header>
+
+      <main>
+        <section class="section" id="dashboard">
+          <div class="section-header">
+            <p class="section-kicker">Diagnostico base</p>
+            <h2>Que cuenta el dataset sobre tu precio</h2>
+            <p class="section-copy">
+              Las metricas resumen el tipo de mercado que sugieren estas
+              personas: tension en precio, necesidad de confianza y espacio real
+              para argumentos de valor.
+            </p>
+          </div>
+          <div class="metrics-grid" id="metricsGrid"></div>
+          <div class="insight-grid" id="insightGrid"></div>
+        </section>
+
+        <section class="section simulator-section" id="simulator">
+          <div class="section-header">
+            <p class="section-kicker">Simulador heuristico</p>
+            <h2>Como podria reaccionar la muestra a tu precio</h2>
+            <p class="section-copy">
+              Ajusta el precio relativo frente al mercado y la claridad con la
+              que explicas tu valor. La simulacion es orientativa: sirve para
+              visualizar tension, no para sustituir una validacion real.
+            </p>
+          </div>
+
+          <div class="simulator-layout">
+            <div class="control-card">
+              <label class="control-label" for="priceIndex">
+                Precio frente al mercado
+                <span id="priceIndexValue">110%</span>
+              </label>
+              <input
+                id="priceIndex"
+                type="range"
+                min="80"
+                max="140"
+                step="1"
+                value="110"
+              />
+              <p class="control-help">
+                100% equivale a un precio medio. Por encima crece la friccion;
+                por debajo compras margen de adopcion.
+              </p>
+
+              <label class="control-label" for="valueProof">
+                Claridad del valor percibido
+                <span id="valueProofValue">55/100</span>
+              </label>
+              <input
+                id="valueProof"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value="55"
+              />
+              <p class="control-help">
+                Incluye prueba social, comparativas, transparencia de precio y
+                razones para creer.
+              </p>
+            </div>
+
+            <div class="simulator-results">
+              <div class="fit-card" id="fitCard"></div>
+              <div class="segment-grid" id="simulatorSegments"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section map-section" id="map">
+          <div class="section-header">
+            <p class="section-kicker">Mapa de tension</p>
+            <h2>Precio sensible vs seguridad economica</h2>
+            <p class="section-copy">
+              Cada punto es una persona. Cuanto mas a la derecha, mas sensible
+              al precio; cuanto mas arriba, mayor margen economico percibido.
+            </p>
+          </div>
+
+          <div class="map-layout">
+            <div class="plot-card">
+              <div class="plot-label plot-label-x">Mas sensibilidad al precio</div>
+              <div class="plot-label plot-label-y">Mas seguridad economica</div>
+              <div class="scatter-plot" id="scatterPlot"></div>
+            </div>
+            <div class="style-list" id="decisionStyles"></div>
+          </div>
+        </section>
+
+        <section class="section persona-section" id="personas">
+          <div class="section-header">
+            <p class="section-kicker">Biblioteca de personas</p>
+            <h2>Filtra los perfiles que mas te interesa observar</h2>
+            <p class="section-copy">
+              Usa estos filtros para centrarte en quien mas probablemente te
+              diga "es caro" y quien necesita otra narrativa para aceptar el
+              precio.
+            </p>
+          </div>
+
+          <div class="filter-bar">
+            <label class="filter-field">
+              <span>Ingresos</span>
+              <select id="incomeFilter"></select>
+            </label>
+            <label class="filter-field">
+              <span>Decision</span>
+              <select id="decisionFilter"></select>
+            </label>
+            <label class="filter-field filter-field-wide" for="sensitivityFilter">
+              <span>
+                Sensibilidad minima al precio
+                <strong id="sensitivityFilterValue">0%</strong>
+              </span>
+              <input
+                id="sensitivityFilter"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                value="0"
+              />
+            </label>
+          </div>
+
+          <div class="persona-grid" id="personasGrid"></div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <p>
+          Sample elaborado a partir del dataset original
+          <a
+            href="https://huggingface.co/datasets/apol/spain-reference-personas-frontier"
+            target="_blank"
+            rel="noreferrer"
+            >Spain Reference Personas Frontier</a
+          >.
+        </p>
+        <p id="appStatus">Cargando dataset...</p>
+      </footer>
+    </div>
+  </body>
+</html>
