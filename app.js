@@ -12,9 +12,10 @@ const state = {
 };
 
 const refs = {
+  heroBrief: document.getElementById("heroBrief"),
   heroPersonaCount: document.getElementById("heroPersonaCount"),
-  heroSignals: document.getElementById("heroSignals"),
   metricsGrid: document.getElementById("metricsGrid"),
+  territoryBoard: document.getElementById("territoryBoard"),
   insightGrid: document.getElementById("insightGrid"),
   fitCard: document.getElementById("fitCard"),
   simulatorSegments: document.getElementById("simulatorSegments"),
@@ -34,11 +35,20 @@ const refs = {
 
 const decisionLabels = {
   price_first: "Precio primero",
-  brand_sensitive: "Marca y estatus",
-  convenience_first: "Conveniencia",
+  brand_sensitive: "Marca y aspiracion",
+  convenience_first: "Compra rapida y comoda",
   sustainability_first: "Sostenibilidad",
-  local_loyalty: "Preferencia local",
+  local_loyalty: "Producto local",
   quality_balanced: "Calidad equilibrada",
+};
+
+const decisionMessages = {
+  price_first: "Precio visible, promociones claras y sin sorpresas al pagar.",
+  brand_sensitive: "Imagen cuidada, surtido aspiracional y experiencia pulida.",
+  convenience_first: "Rapidez, cercania y compra resuelta en pocos minutos.",
+  sustainability_first: "Origen, frescura y credenciales sostenibles muy claras.",
+  local_loyalty: "Proximidad, trato cercano y producto del entorno.",
+  quality_balanced: "Senales de calidad claras sin parecer excesivamente premium.",
 };
 
 const incomeLabels = {
@@ -62,12 +72,12 @@ const environmentLabels = {
 };
 
 const styleColors = {
-  price_first: "#cd5c2b",
-  brand_sensitive: "#b44d64",
-  convenience_first: "#c69324",
-  sustainability_first: "#0b7d77",
-  local_loyalty: "#738552",
-  quality_balanced: "#5b6cb2",
+  price_first: "#d86f31",
+  brand_sensitive: "#6f8f6b",
+  convenience_first: "#ec9e39",
+  sustainability_first: "#2f7f69",
+  local_loyalty: "#8f6c42",
+  quality_balanced: "#495e97",
 };
 
 async function init() {
@@ -87,7 +97,7 @@ async function init() {
   } catch (error) {
     console.error(error);
     setStatus(
-      "No se pudo cargar persons.json. En GitHub Pages funcionara al servirse desde el mismo directorio.",
+      "No se pudo cargar persons.json. Sirve la carpeta con un servidor estatico o publicala en GitHub Pages.",
       false
     );
   }
@@ -124,11 +134,9 @@ function bindEvents() {
 }
 
 function normalizePersona(persona) {
-  const environment = persona.environment === "Uban" ? "Urban" : persona.environment;
-
   return {
     ...persona,
-    environment,
+    environment: persona.environment === "Uban" ? "Urban" : persona.environment,
     shortLabel: persona.label.split(" ").slice(0, 2).join(" "),
   };
 }
@@ -138,10 +146,8 @@ function populateFilters() {
     value === "all" ? "Todos los ingresos" : incomeLabels[value] || value
   );
 
-  setSelectOptions(
-    refs.decisionFilter,
-    ["all", ...uniqueValues(state.personas, "decisionStyle")],
-    (value) => (value === "all" ? "Todas las decisiones" : decisionLabels[value] || value)
+  setSelectOptions(refs.decisionFilter, ["all", ...uniqueValues(state.personas, "decisionStyle")], (value) =>
+    value === "all" ? "Todos los criterios" : decisionLabels[value] || value
   );
 }
 
@@ -158,6 +164,7 @@ function setSelectOptions(select, values, labelResolver) {
 function renderAll() {
   renderHero();
   renderMetrics();
+  renderTerritories();
   renderInsights();
   renderSimulator();
   renderScatter();
@@ -168,129 +175,170 @@ function renderAll() {
 function renderHero() {
   const total = state.personas.length;
   const highSensitivity = state.personas.filter((persona) => persona.priceSensitivity >= 0.7).length;
-  const lowTrust = state.personas.filter((persona) => persona.trustLevel < 0.5).length;
-  const premiumReady = state.personas.filter((persona) => persona.priceSensitivity < 0.45).length;
+  const urban = state.personas.filter((persona) => persona.environment === "Urban").length;
+  const premium = state.personas.filter((persona) => persona.priceSensitivity < 0.45).length;
 
   refs.heroPersonaCount.textContent = total;
-
-  const signals = [
-    `${highSensitivity} de ${total} perfiles muestran sensibilidad alta al precio.`,
-    `${lowTrust} de ${total} parten de una confianza baja o fragil.`,
-    `${premiumReady} perfiles parecen admitir una propuesta mas premium si el valor se entiende bien.`,
-  ];
-
-  refs.heroSignals.innerHTML = "";
-  signals.forEach((signal) => {
-    const item = document.createElement("li");
-    item.textContent = signal;
-    refs.heroSignals.append(item);
-  });
+  refs.heroBrief.innerHTML = [
+    {
+      term: "Friccion clara",
+      detail: `${highSensitivity} perfiles ya llegan con una tension fuerte respecto al precio.`,
+    },
+    {
+      term: "Peso urbano",
+      detail: `${urban} perfiles viven en entornos urbanos, donde la comparacion es constante.`,
+    },
+    {
+      term: "Margen premium",
+      detail: `Solo ${premium} perfiles parecen admitir una prima clara sin demasiada resistencia.`,
+    },
+  ]
+    .map(
+      (item) => `
+        <div class="brief-item">
+          <dt>${item.term}</dt>
+          <dd>${item.detail}</dd>
+        </div>
+      `
+    )
+    .join("");
 }
 
 function renderMetrics() {
   const personas = state.personas;
-  const averageSensitivity = mean(personas, "priceSensitivity");
-  const highSensitivityShare = personas.filter((persona) => persona.priceSensitivity >= 0.7).length / personas.length;
-  const lowTrustShare = personas.filter((persona) => persona.trustLevel < 0.5).length / personas.length;
-  const valueDrivenAverage = mean(
-    personas.filter((persona) => ["sustainability_first", "local_loyalty"].includes(persona.decisionStyle)),
-    "priceSensitivity"
-  );
-  const topDecision = Object.entries(groupByCount(personas, "decisionStyle")).sort((a, b) => b[1] - a[1])[0];
-
   const metrics = [
     {
-      title: "Sensibilidad media",
-      value: formatPercent(averageSensitivity),
-      note: "Una media alta indica que el precio sera parte central de la decision.",
+      label: "Sensibilidad media",
+      value: formatPercent(mean(personas, "priceSensitivity")),
+      note: "Si subes el precio medio, la justificacion tiene que verse rapido.",
     },
     {
-      title: "Mercado tensionado",
-      value: formatPercent(highSensitivityShare),
-      note: "Cuota de personas con sensibilidad alta al precio.",
+      label: "Confianza inicial baja",
+      value: formatPercent(personas.filter((persona) => persona.trustLevel < 0.5).length / personas.length),
+      note: "Conviene enseñar calidad, origen y logica de precio desde la primera visita.",
     },
     {
-      title: "Confianza fragil",
-      value: formatPercent(lowTrustShare),
-      note: "Si tu precio sube, la transparencia y las pruebas importan aun mas.",
+      label: "Entrada prudente",
+      value: `${personas.filter((persona) => persona.priceSensitivity >= 0.7).length}/${personas.length}`,
+      note: "Buena señal para empezar con una oferta clara y un precio medio controlado.",
     },
     {
-      title: "Decision dominante",
-      value: decisionLabels[topDecision[0]] || topDecision[0],
-      note: `Los segmentos guiados por este criterio son ${topDecision[1]} de ${personas.length}.`,
-    },
-    {
-      title: "Valores con friccion",
-      value: formatPercent(valueDrivenAverage),
-      note: "Ni sostenibilidad ni proximidad borran por si solas la tension de precio.",
-    },
-    {
-      title: "Segmento premium",
-      value: `${personas.filter((persona) => persona.priceSensitivity < 0.45).length}/${personas.length}`,
-      note: "Personas que podrian tolerar una prima si el valor esta muy bien argumentado.",
-    },
-    {
-      title: "Digital dominante",
-      value: topDigitalLabel(personas),
-      note: "Sirve para calibrar formato de prueba social, comparativas y detalle de oferta.",
-    },
-    {
-      title: "Edad dominante",
-      value: topAgeGroup(personas),
-      note: "La muestra esta sesgada hacia etapas vitales donde comparar sigue siendo habitual.",
+      label: "Criterio dominante",
+      value: decisionLabels[topKey(personas, "decisionStyle")] || topKey(personas, "decisionStyle"),
+      note: "Es la forma de decidir que mas se repite al comprar.",
     },
   ];
 
   refs.metricsGrid.innerHTML = metrics
     .map(
       (metric) => `
-        <article class="metric-card">
-          <span class="metric-title">${metric.title}</span>
-          <strong class="metric-value">${metric.value}</strong>
-          <p class="metric-note">${metric.note}</p>
+        <article class="metric">
+          <span>${metric.label}</span>
+          <strong>${metric.value}</strong>
+          <p>${metric.note}</p>
         </article>
       `
     )
     .join("");
 }
 
+function renderTerritories() {
+  const environments = ["Urban", "Suburban", "Rural"]
+    .map((environment) => buildEnvironmentReading(environment))
+    .sort((a, b) => b.openingScore - a.openingScore);
+
+  refs.territoryBoard.innerHTML = environments
+    .map(
+      (entry, index) => `
+        <article class="territory ${index === 0 ? "territory-featured" : ""}">
+          <div class="territory-rank">0${index + 1}</div>
+          <div class="territory-body">
+            <div class="territory-head">
+              <p>${entry.title}</p>
+              <strong>${entry.recommendation}</strong>
+            </div>
+            <p class="territory-copy">${entry.copy}</p>
+            <div class="territory-meta">
+              <span>${entry.personaCount} perfiles</span>
+              <span>Sensibilidad media ${formatPercent(entry.avgSensitivity)}</span>
+              <span>${entry.message}</span>
+            </div>
+          </div>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function buildEnvironmentReading(environment) {
+  const personas = state.personas.filter((persona) => persona.environment === environment);
+  const avgSensitivity = mean(personas, "priceSensitivity");
+  const avgSecurity = mean(personas, "economicSecurity");
+  const openingScore = clamp(0.62 - avgSensitivity * 0.52 + avgSecurity * 0.38, 0, 1);
+
+  let recommendation = "Entrada prudente";
+  let copy = "Buena zona para probar un surtido claro, precios visibles y una propuesta sencilla.";
+  let message = "Prioriza claridad de precio y compra recurrente.";
+
+  if (openingScore > 0.58) {
+    recommendation = "Zona mas defendible";
+    copy = "Aqui parece mas realista abrir primero si tu propuesta mezcla frescura, conveniencia y una prima moderada.";
+    message = "Puedes empujar algo mas la calidad sin parecer fuera de mercado.";
+  } else if (openingScore < 0.47) {
+    recommendation = "Abrir con cautela";
+    copy = "La sensibilidad al precio pesa demasiado. Si entras aqui, necesitaras una propuesta muy nitida y poco aspiracional al principio.";
+    message = "Evita sobredisenar el concepto si el precio no acompana.";
+  }
+
+  return {
+    title: `${environmentLabels[environment] || environment}`,
+    recommendation,
+    copy,
+    message,
+    avgSensitivity,
+    openingScore,
+    personaCount: personas.length,
+  };
+}
+
 function renderInsights() {
-  const personas = state.personas;
-  const priceFirst = personas.filter((persona) => persona.decisionStyle === "price_first");
-  const valueDriven = personas.filter((persona) =>
+  const priceFirst = state.personas.filter((persona) => persona.decisionStyle === "price_first");
+  const values = state.personas.filter((persona) =>
     ["sustainability_first", "local_loyalty"].includes(persona.decisionStyle)
   );
-  const premium = personas.filter((persona) => persona.priceSensitivity < 0.45);
+  const premium = state.personas.filter((persona) => persona.priceSensitivity < 0.45);
 
-  const cards = [
+  const insights = [
     {
-      tag: "Lectura 01",
-      title: "Subir precio sin narrativa sera duro",
-      copy: `${priceFirst.length} perfiles deciden primero por precio y su sensibilidad media sube hasta ${formatPercent(
+      index: "01",
+      title: "Abrir en premium desde el principio seria arriesgado",
+      copy: `Los perfiles mas sensibles al precio siguen pesando mucho. El grupo "precio primero" se mueve en ${formatPercent(
         mean(priceFirst, "priceSensitivity")
-      )}. Si vas por encima de mercado, necesitas justificar muy bien el salto.`,
+      )} de sensibilidad media.`,
     },
     {
-      tag: "Lectura 02",
-      title: "Los valores ayudan, pero no salvan",
-      copy: `Los perfiles movidos por sostenibilidad o cercania local siguen mostrando ${formatPercent(
-        mean(valueDriven, "priceSensitivity")
-      )} de sensibilidad media. El valor etico necesita ir acompanado de claridad economica.`,
+      index: "02",
+      title: "Lo local y lo sostenible ayudan, pero no sustituyen el precio",
+      copy: `Los perfiles guiados por valores siguen mostrando ${formatPercent(
+        mean(values, "priceSensitivity")
+      )} de sensibilidad. Tu relato necesita apoyo economico, no solo emocional.`,
     },
     {
-      tag: "Lectura 03",
-      title: "Hay hueco premium, pero es minoritario",
-      copy: `${premium.length} de ${personas.length} personas parecen tener margen para aceptar una prima. Son utiles para capturar ticket alto, no para definir por si solas la estrategia base.`,
+      index: "03",
+      title: "Hay margen para una tienda mas aspiracional, pero es pequeno",
+      copy: `${premium.length} perfiles admiten una prima mas clara. Conviene verlo como una capa extra de margen, no como la estrategia base.`,
     },
   ];
 
-  refs.insightGrid.innerHTML = cards
+  refs.insightGrid.innerHTML = insights
     .map(
-      (card) => `
-        <article class="insight-card">
-          <span class="tag">${card.tag}</span>
-          <h3>${card.title}</h3>
-          <p class="insight-copy">${card.copy}</p>
+      (item) => `
+        <article class="insight-line">
+          <span>${item.index}</span>
+          <div>
+            <h3>${item.title}</h3>
+            <p>${item.copy}</p>
+          </div>
         </article>
       `
     )
@@ -298,82 +346,72 @@ function renderInsights() {
 }
 
 function renderSimulator() {
-  const personas = state.personas;
-  const scores = personas.map((persona) =>
-    Object.assign({}, persona, {
-      fitScore: simulateFit(persona, state.simulator.priceIndex, state.simulator.valueProof),
-    })
-  );
+  const scored = state.personas.map((persona) => ({
+    ...persona,
+    fitScore: simulateFit(persona, state.simulator.priceIndex, state.simulator.valueProof),
+  }));
 
-  const averageFit = scores.reduce((sum, persona) => sum + persona.fitScore, 0) / scores.length;
-  const resistant = scores.filter((persona) => persona.fitScore < 0.45);
-  const aligned = scores.filter((persona) => persona.fitScore >= 0.65);
-  const resistantTop = [...scores].sort((a, b) => a.fitScore - b.fitScore).slice(0, 3);
-  const fitTone = getFitTone(averageFit);
+  const averageFit = mean(scored, "fitScore");
+  const highRisk = scored.filter((persona) => persona.fitScore < 0.45);
+  const strongFit = scored.filter((persona) => persona.fitScore >= 0.65);
+  const hardest = [...scored].sort((a, b) => a.fitScore - b.fitScore)[0];
+  const tone = getFitTone(averageFit);
 
   refs.fitCard.innerHTML = `
-    <div class="fit-topline">
-      <div>
-        <p class="section-kicker">Encaje agregado</p>
-        <h3>${fitTone.title}</h3>
-      </div>
-      <div class="fit-score" data-tone="${fitTone.tone}">${formatPercent(averageFit)}</div>
+    <div class="fit-header">
+      <p class="eyebrow">Lectura del escenario</p>
+      <strong class="fit-score" data-tone="${tone.tone}">${formatPercent(averageFit)}</strong>
     </div>
-    <p class="fit-copy">${fitTone.copy}</p>
-    <div class="micro-grid">
-      <div class="micro-card">
-        <span class="micro-label">Riesgo alto</span>
-        <strong class="micro-value">${resistant.length}/${scores.length}</strong>
+    <h3>${tone.title}</h3>
+    <p class="fit-copy">${tone.copy}</p>
+    <div class="fit-detail-grid">
+      <div>
+        <span>Perfiles en riesgo</span>
+        <strong>${highRisk.length}/${scored.length}</strong>
       </div>
-      <div class="micro-card">
-        <span class="micro-label">Buen encaje</span>
-        <strong class="micro-value">${aligned.length}/${scores.length}</strong>
+      <div>
+        <span>Buen encaje</span>
+        <strong>${strongFit.length}/${scored.length}</strong>
       </div>
-      <div class="micro-card">
-        <span class="micro-label">Mas resistencia</span>
-        <strong class="micro-value">${resistantTop[0] ? resistantTop[0].shortLabel : "--"}</strong>
+      <div>
+        <span>Mayor resistencia</span>
+        <strong>${hardest ? hardest.shortLabel : "--"}</strong>
       </div>
     </div>
   `;
 
-  const segmentDefinitions = [
+  const segments = [
     {
-      label: "Segmento precio primero",
-      description: "Quien tiende a comparar y castiga cualquier prima poco explicada.",
-      personas: personas.filter((persona) => persona.decisionStyle === "price_first"),
+      title: "Compra muy sensible al precio",
+      personas: scored.filter((persona) => persona.decisionStyle === "price_first"),
+      advice: "Trabaja una oferta visible, una compra clara y evita senales de lujo innecesarias.",
     },
     {
-      label: "Segmento guiado por valores",
-      description: "Aprecia sostenibilidad o cercania, pero aun necesita sentir equilibrio economico.",
-      personas: personas.filter((persona) =>
+      title: "Compra por valores o proximidad",
+      personas: scored.filter((persona) =>
         ["sustainability_first", "local_loyalty"].includes(persona.decisionStyle)
       ),
+      advice: "El origen ayuda, pero solo si la diferencia de precio parece razonable.",
     },
     {
-      label: "Segmento valor y conveniencia",
-      description: "Tolera mejor el precio si el beneficio se percibe rapido y claro.",
-      personas: personas.filter(
-        (persona) => !["price_first", "sustainability_first", "local_loyalty"].includes(persona.decisionStyle)
+      title: "Compra por calidad o comodidad",
+      personas: scored.filter((persona) =>
+        ["quality_balanced", "convenience_first", "brand_sensitive"].includes(persona.decisionStyle)
       ),
+      advice: "Aqui puedes defender algo mas de margen si la experiencia de compra se entiende rapido.",
     },
   ];
 
-  refs.simulatorSegments.innerHTML = segmentDefinitions
+  refs.simulatorSegments.innerHTML = segments
     .map((segment) => {
-      const segmentScore = mean(
-        segment.personas.map((persona) => ({
-          fitScore: simulateFit(persona, state.simulator.priceIndex, state.simulator.valueProof),
-        })),
-        "fitScore"
-      );
-      const tone = getFitTone(segmentScore);
-
+      const score = mean(segment.personas, "fitScore");
+      const segmentTone = getFitTone(score);
       return `
-        <article class="segment-card">
-          <span class="tag">${segment.label}</span>
-          <div class="segment-score" data-tone="${tone.tone}">${formatPercent(segmentScore)}</div>
-          <span class="segment-tone">${tone.title}</span>
-          <p class="insight-copy">${segment.description}</p>
+        <article class="segment">
+          <p>${segment.title}</p>
+          <strong data-tone="${segmentTone.tone}">${formatPercent(score)}</strong>
+          <span>${segmentTone.title}</span>
+          <p class="segment-copy">${segment.advice}</p>
         </article>
       `;
     })
@@ -385,19 +423,19 @@ function renderScatter() {
     .map((persona) => {
       const left = persona.priceSensitivity * 100;
       const bottom = persona.economicSecurity * 100;
-      const size = 12 + persona.brandLoyalty * 12;
+      const size = 12 + persona.brandLoyalty * 13;
       const color = styleColors[persona.decisionStyle] || "#1f1d1a";
 
       return `
         <button
           class="plot-point"
           style="left: ${left}%; bottom: ${bottom}%; width: ${size}px; height: ${size}px; background: ${color};"
-          data-short="${escapeHtml(persona.shortLabel)}"
           title="${escapeHtml(
-            `${persona.label} | ${decisionLabels[persona.decisionStyle] || persona.decisionStyle} | sensibilidad ${formatPercent(
+            `${persona.label} | ${decisionLabels[persona.decisionStyle] || persona.decisionStyle} | precio ${formatPercent(
               persona.priceSensitivity
             )}`
           )}"
+          data-short="${escapeHtml(persona.shortLabel)}"
           aria-label="${escapeHtml(persona.label)}"
         ></button>
       `;
@@ -407,32 +445,28 @@ function renderScatter() {
 
 function renderDecisionStyles() {
   const grouped = Object.entries(groupByCount(state.personas, "decisionStyle"))
-    .map(([decision, count]) => {
-      const personas = state.personas.filter((persona) => persona.decisionStyle === decision);
-      return {
-        decision,
-        count,
-        averageSensitivity: mean(personas, "priceSensitivity"),
-      };
-    })
+    .map(([decision, count]) => ({
+      decision,
+      count,
+      averageSensitivity: mean(
+        state.personas.filter((persona) => persona.decisionStyle === decision),
+        "priceSensitivity"
+      ),
+    }))
     .sort((a, b) => b.count - a.count);
 
   refs.decisionStyles.innerHTML = grouped
-    .map((item) => {
-      const color = styleColors[item.decision] || "#1f1d1a";
-      return `
-        <article class="style-item">
-          <div class="style-head">
-            <h3>${decisionLabels[item.decision] || item.decision}</h3>
-            <span class="style-count">${item.count} perfiles</span>
+    .map(
+      (item) => `
+        <div class="legend-item">
+          <span class="legend-dot" style="background: ${styleColors[item.decision] || "#1f1d1a"};"></span>
+          <div>
+            <strong>${decisionLabels[item.decision] || item.decision}</strong>
+            <small>${item.count} perfiles · sensibilidad ${formatPercent(item.averageSensitivity)}</small>
           </div>
-          <p class="style-meta">Sensibilidad media al precio: ${formatPercent(item.averageSensitivity)}</p>
-          <div class="style-bar">
-            <span style="width: ${item.averageSensitivity * 100}%; background: ${color};"></span>
-          </div>
-        </article>
-      `;
-    })
+        </div>
+      `
+    )
     .join("");
 }
 
@@ -446,7 +480,7 @@ function renderPersonas() {
   if (!filtered.length) {
     refs.personasGrid.innerHTML = `
       <div class="empty-state">
-        No hay personas que cumplan estos filtros. Baja el umbral o abre mas segmentos.
+        No hay perfiles con estos filtros. Baja el umbral o abre mas criterios.
       </div>
     `;
     return;
@@ -455,32 +489,39 @@ function renderPersonas() {
   refs.personasGrid.innerHTML = filtered
     .map(
       (persona) => `
-        <article class="persona-card">
-          <div class="persona-header">
+        <article class="persona">
+          <div class="persona-top">
             <div>
+              <p class="persona-eyebrow">${environmentLabels[persona.environment] || persona.environment}</p>
               <h3>${persona.label}</h3>
-              <div class="persona-meta">
-                <span class="persona-tag">${incomeLabels[persona.incomeLevel] || persona.incomeLevel}</span>
-                <span class="persona-tag">${decisionLabels[persona.decisionStyle] || persona.decisionStyle}</span>
-                <span class="persona-tag">${environmentLabels[persona.environment] || persona.environment}</span>
-              </div>
             </div>
-            <span class="persona-tag">${persona.ageGroup}</span>
+            <span class="persona-age">${persona.ageGroup}</span>
           </div>
 
           <p class="persona-summary">${buildPersonaSummary(persona)}</p>
 
-          <div class="persona-tag-row">
-            <span class="persona-tag">${digitalLabels[persona.digitalLevel] || persona.digitalLevel}</span>
-            <span class="persona-tag">${persona.education}</span>
-            <span class="persona-tag">${persona.household.replaceAll("_", " ")}</span>
+          <div class="persona-tags">
+            <span>${incomeLabels[persona.incomeLevel] || persona.incomeLevel}</span>
+            <span>${decisionLabels[persona.decisionStyle] || persona.decisionStyle}</span>
+            <span>${digitalLabels[persona.digitalLevel] || persona.digitalLevel}</span>
+          </div>
+
+          <div class="persona-advice">
+            <div>
+              <strong>Que le tienes que demostrar</strong>
+              <p>${buildPersonaProof(persona)}</p>
+            </div>
+            <div>
+              <strong>Como venderle la tienda</strong>
+              <p>${decisionMessages[persona.decisionStyle] || "Explica el valor de forma directa y concreta."}</p>
+            </div>
           </div>
 
           <div class="bar-group">
-            ${renderBar("Sensibilidad precio", persona.priceSensitivity, "--bar-color: #cd5c2b;")}
-            ${renderBar("Confianza", persona.trustLevel, "--bar-color: #0b7d77;")}
-            ${renderBar("Seguridad economica", persona.economicSecurity, "--bar-color: #738552;")}
-            ${renderBar("Sostenibilidad", persona.sustainability, "--bar-color: #c69324;")}
+            ${renderBar("Sensibilidad al precio", persona.priceSensitivity, "#d86f31")}
+            ${renderBar("Confianza", persona.trustLevel, "#2f7f69")}
+            ${renderBar("Seguridad economica", persona.economicSecurity, "#6f8f6b")}
+            ${renderBar("Valor sostenible", persona.sustainability, "#ec9e39")}
           </div>
         </article>
       `
@@ -488,12 +529,12 @@ function renderPersonas() {
     .join("");
 }
 
-function renderBar(label, value, inlineStyle) {
+function renderBar(label, value, color) {
   return `
     <div class="bar-row">
       <span class="bar-label">${label}</span>
       <div class="bar-track">
-        <span class="bar-fill" style="${inlineStyle} width: ${value * 100}%; background: var(--bar-color);"></span>
+        <span class="bar-fill" style="width: ${value * 100}%; background: ${color};"></span>
       </div>
       <span class="bar-value">${formatPercent(value)}</span>
     </div>
@@ -505,20 +546,20 @@ function simulateFit(persona, priceIndex, valueProof) {
   const discountDelta = Math.max(0, 100 - priceIndex) / 100;
   const proof = valueProof / 100;
 
-  let score = 0.57;
+  let score = 0.58;
   score += (persona.economicSecurity - 0.5) * 0.22;
-  score += (persona.trustLevel - 0.5) * 0.2;
-  score += (persona.brandLoyalty - 0.5) * 0.12;
+  score += (persona.trustLevel - 0.5) * 0.18;
+  score += (persona.brandLoyalty - 0.5) * 0.1;
   score += (proof - 0.5) * getProofWeight(persona);
-  score -= premiumDelta * (0.5 + persona.priceSensitivity * 0.8);
-  score += discountDelta * (0.18 + persona.priceSensitivity * 0.24);
+  score -= premiumDelta * (0.52 + persona.priceSensitivity * 0.78);
+  score += discountDelta * (0.18 + persona.priceSensitivity * 0.26);
 
   if (persona.decisionStyle === "price_first") {
-    score -= premiumDelta * 0.28;
+    score -= premiumDelta * 0.26;
   }
 
   if (persona.decisionStyle === "sustainability_first") {
-    score += proof * persona.sustainability * 0.1;
+    score += proof * persona.sustainability * 0.11;
   }
 
   if (persona.decisionStyle === "local_loyalty") {
@@ -526,7 +567,7 @@ function simulateFit(persona, priceIndex, valueProof) {
   }
 
   if (persona.decisionStyle === "brand_sensitive") {
-    score += proof * persona.brandLoyalty * 0.12;
+    score += proof * persona.brandLoyalty * 0.1;
   }
 
   return clamp(score, 0.06, 0.94);
@@ -534,11 +575,11 @@ function simulateFit(persona, priceIndex, valueProof) {
 
 function getProofWeight(persona) {
   const weights = {
-    price_first: 0.1,
-    brand_sensitive: 0.22,
-    convenience_first: 0.2,
+    price_first: 0.08,
+    brand_sensitive: 0.21,
+    convenience_first: 0.19,
     sustainability_first: 0.18,
-    local_loyalty: 0.15,
+    local_loyalty: 0.14,
     quality_balanced: 0.2,
   };
 
@@ -549,55 +590,69 @@ function getFitTone(score) {
   if (score < 0.4) {
     return {
       tone: "fragil",
-      title: "Encaje fragil",
-      copy: "El precio propuesto generaria rechazo en buena parte de la muestra. Necesitas bajar friccion o reforzar mucho mas el valor.",
+      title: "Escenario fragil",
+      copy: "Con este precio medio, una parte importante de la muestra sentiria la tienda demasiado cara o poco clara.",
     };
   }
 
   if (score < 0.55) {
     return {
       tone: "tenso",
-      title: "Encaje tenso",
-      copy: "El escenario es defendible, pero varios perfiles seguiran viendo la oferta como cara o arriesgada.",
+      title: "Escenario tenso",
+      copy: "La propuesta puede funcionar, pero solo si el valor se explica muy bien y el surtido evita ambiguedad.",
     };
   }
 
   if (score < 0.7) {
     return {
       tone: "viable",
-      title: "Encaje viable",
-      copy: "Hay margen para sostener el precio siempre que la explicacion de valor sea consistente y visible.",
+      title: "Escenario viable",
+      copy: "Hay margen para defender el precio si la promesa de frescura, origen y comodidad es visible desde fuera.",
     };
   }
 
   return {
     tone: "solido",
-    title: "Encaje solido",
-    copy: "La combinacion de precio y narrativa parece alinearse bien con la muestra actual.",
+    title: "Escenario solido",
+    copy: "La muestra parece tolerar bien el precio propuesto y la narrativa comercial acompana.",
   };
 }
 
 function buildPersonaSummary(persona) {
   const sensitivityText =
     persona.priceSensitivity >= 0.7
-      ? "Reacciona rapido ante un precio percibido como alto."
+      ? "Va a notar cualquier sobreprecio muy rapido."
       : persona.priceSensitivity >= 0.5
-        ? "Compara antes de decidir y necesita sentir equilibrio."
-        : "Tolera mejor una prima si entiende lo que gana.";
+        ? "Compara y necesita sentir equilibrio entre calidad y precio."
+        : "Puede aceptar una propuesta mas premium si la experiencia convence.";
 
   return `${incomeLabels[persona.incomeLevel] || persona.incomeLevel}, ${environmentLabels[persona.environment] || persona.environment}, ${
     digitalLabels[persona.digitalLevel] || persona.digitalLevel
   }. ${sensitivityText}`;
 }
 
-function topDigitalLabel(personas) {
-  const [key] = Object.entries(groupByCount(personas, "digitalLevel")).sort((a, b) => b[1] - a[1])[0];
-  return digitalLabels[key] || key;
-}
+function buildPersonaProof(persona) {
+  if (persona.decisionStyle === "price_first") {
+    return "Que la compra basica tiene logica, que el precio se entiende y que no estas cobrando por estetica.";
+  }
 
-function topAgeGroup(personas) {
-  const [key] = Object.entries(groupByCount(personas, "ageGroup")).sort((a, b) => b[1] - a[1])[0];
-  return key;
+  if (persona.decisionStyle === "sustainability_first") {
+    return "Que el origen, la frescura y la sostenibilidad son reales y visibles, no solo una promesa.";
+  }
+
+  if (persona.decisionStyle === "local_loyalty") {
+    return "Que la tienda pertenece al barrio o al entorno y que el producto local tiene presencia de verdad.";
+  }
+
+  if (persona.decisionStyle === "convenience_first") {
+    return "Que puede resolver la compra diaria rapido, con buena presentacion y sin perder tiempo.";
+  }
+
+  if (persona.decisionStyle === "brand_sensitive") {
+    return "Que la tienda se siente cuidada, fiable y un poco mejor que la media sin parecer artificial.";
+  }
+
+  return "Que pagara un poco mas por una calidad que realmente nota al entrar y al comprar.";
 }
 
 function groupByCount(items, field) {
@@ -609,6 +664,10 @@ function groupByCount(items, field) {
 
 function uniqueValues(items, field) {
   return [...new Set(items.map((item) => item[field]))];
+}
+
+function topKey(items, field) {
+  return Object.entries(groupByCount(items, field)).sort((a, b) => b[1] - a[1])[0][0];
 }
 
 function mean(items, field) {

@@ -3,78 +3,120 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Encaje de precio | Spain Reference Personas</title>
+    <title>FrutaFit | Donde abrir y como fijar precio</title>
     <meta
       name="description"
-      content="Pagina estatica para evaluar el encaje de precio a partir de un dataset de personas."
+      content="Lectura visual de una muestra de personas para decidir donde abrir una franquicia de fruta y como defender el precio."
     />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Space+Grotesk:wght@400;500;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;700;800&family=Prata&display=swap"
       rel="stylesheet"
     />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <link rel="stylesheet" href="./styles.css" />
     <script src="./app.js" defer></script>
   </head>
   <body>
-    <div class="page-shell">
-      <header class="hero">
-        <div class="hero-copy">
-          <p class="eyebrow">Spain Reference Personas</p>
-          <h1>Evaluar si mi precio encaja con este tipo de cliente</h1>
-          <p class="hero-lead">
-            Esta pagina traduce el dataset de personas a una lectura de negocio:
-            donde aparece la friccion por precio, quien necesita mas prueba de
-            valor y que segmentos admiten una propuesta mas premium.
-          </p>
-          <div class="hero-actions">
-            <a class="button button-primary" href="#simulator">Probar escenario</a>
-            <a class="button button-secondary" href="#personas">Explorar personas</a>
-          </div>
-        </div>
+    <div class="site-frame">
+      <header class="hero" id="top">
+        <nav class="topbar">
+          <a class="brandmark" href="#top">
+            <span class="brandmark-badge">F</span>
+            <span class="brandmark-copy">
+              <strong>FrutaFit</strong>
+              <small>Guia para decidir mejor</small>
+            </span>
+          </a>
 
-        <aside class="hero-panel">
-          <p class="panel-kicker">Lectura rapida</p>
-          <div class="hero-stat">
-            <span class="hero-stat-value" id="heroPersonaCount">--</span>
-            <span class="hero-stat-label">personas analizadas</span>
+          <div class="topbar-links">
+            <a href="#territories">Zonas</a>
+            <a href="#simulator">Simulador</a>
+            <a href="#personas">Personas</a>
           </div>
-          <ul class="signal-list" id="heroSignals"></ul>
-        </aside>
+        </nav>
+
+        <div class="hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">Caso de uso aterrizado</p>
+            <h1>Quieres abrir una franquicia de fruta. Esta muestra te dice por donde empezar.</h1>
+            <p class="hero-lead">
+              En lugar de hablar de encaje de precio en abstracto, esta pagina
+              convierte los datos en una decision concreta: que zona soporta
+              mejor tu precio medio, donde te van a comparar mas y que mensaje
+              necesitas para que no te perciban como una fruteria cara.
+            </p>
+
+            <div class="hero-actions">
+              <a class="button button-primary" href="#simulator">Ajustar precio medio</a>
+              <a class="button button-secondary" href="#territories">Ver zonas recomendadas</a>
+            </div>
+
+            <dl class="hero-brief" id="heroBrief"></dl>
+          </div>
+
+          <aside class="hero-stage">
+            <div class="hero-stage-panel">
+              <p class="stage-label">Marco de decision</p>
+              <h2>Si vendes fruta fresca, ecologica o premium, el problema no es solo el precio.</h2>
+              <p>
+                El problema real es donde abrir primero, cuanto margen aguanta
+                ese cliente y si el valor que ofreces se entiende en 10
+                segundos.
+              </p>
+            </div>
+
+            <div class="hero-stage-band">
+              <span>Muestra activa</span>
+              <strong id="heroPersonaCount">--</strong>
+              <small>perfiles de la muestra</small>
+            </div>
+          </aside>
+        </div>
       </header>
 
       <main>
-        <section class="section" id="dashboard">
-          <div class="section-header">
-            <p class="section-kicker">Diagnostico base</p>
-            <h2>Que cuenta el dataset sobre tu precio</h2>
-            <p class="section-copy">
-              Las metricas resumen el tipo de mercado que sugieren estas
-              personas: tension en precio, necesidad de confianza y espacio real
-              para argumentos de valor.
-            </p>
+        <section class="overview-band" id="dashboard">
+          <div class="overview-head">
+            <p class="eyebrow">Lectura ejecutiva</p>
+            <h2>Que pinta tiene el mercado de entrada</h2>
           </div>
-          <div class="metrics-grid" id="metricsGrid"></div>
-          <div class="insight-grid" id="insightGrid"></div>
+          <div class="overview-metrics" id="metricsGrid"></div>
         </section>
 
-        <section class="section simulator-section" id="simulator">
-          <div class="section-header">
-            <p class="section-kicker">Simulador heuristico</p>
-            <h2>Como podria reaccionar la muestra a tu precio</h2>
-            <p class="section-copy">
-              Ajusta el precio relativo frente al mercado y la claridad con la
-              que explicas tu valor. La simulacion es orientativa: sirve para
-              visualizar tension, no para sustituir una validacion real.
+        <section class="editorial-section" id="territories">
+          <div class="section-intro">
+            <p class="eyebrow">Donde abrir primero</p>
+            <h2>Lectura de zonas para una franquicia de fruta</h2>
+            <p>
+              No todas las ubicaciones te piden la misma estrategia. Aqui se
+              resume que tipo de entorno parece mas defendible, donde conviene
+              entrar con un precio prudente y donde necesitarias mas explicacion
+              de valor.
             </p>
           </div>
 
-          <div class="simulator-layout">
-            <div class="control-card">
-              <label class="control-label" for="priceIndex">
-                Precio frente al mercado
-                <span id="priceIndexValue">110%</span>
+          <div class="territory-board" id="territoryBoard"></div>
+          <div class="insight-column" id="insightGrid"></div>
+        </section>
+
+        <section class="editorial-section simulator-section" id="simulator">
+          <div class="section-intro narrow">
+            <p class="eyebrow">Simulador operativo</p>
+            <h2>Que pasa si subes el precio medio de la tienda?</h2>
+            <p>
+              Ajusta el precio frente al mercado y la claridad con la que
+              explicas frescura, origen, conveniencia o calidad. El modelo no
+              predice ventas: ayuda a ver donde apareceria friccion.
+            </p>
+          </div>
+
+          <div class="simulator-shell">
+            <div class="simulator-controls">
+              <label class="control-block" for="priceIndex">
+                <span>Precio medio frente al mercado</span>
+                <strong id="priceIndexValue">110%</strong>
               </label>
               <input
                 id="priceIndex"
@@ -84,14 +126,13 @@
                 step="1"
                 value="110"
               />
-              <p class="control-help">
-                100% equivale a un precio medio. Por encima crece la friccion;
-                por debajo compras margen de adopcion.
+              <p class="control-note">
+                100% significa que tu compra media esta en precio de mercado.
               </p>
 
-              <label class="control-label" for="valueProof">
-                Claridad del valor percibido
-                <span id="valueProofValue">55/100</span>
+              <label class="control-block" for="valueProof">
+                <span>Claridad de valor en tienda y comunicacion</span>
+                <strong id="valueProofValue">55/100</strong>
               </label>
               <input
                 id="valueProof"
@@ -101,62 +142,62 @@
                 step="1"
                 value="55"
               />
-              <p class="control-help">
-                Incluye prueba social, comparativas, transparencia de precio y
-                razones para creer.
+              <p class="control-note">
+                Carteles, origen, atencion, surtido y prueba social.
               </p>
             </div>
 
-            <div class="simulator-results">
-              <div class="fit-card" id="fitCard"></div>
-              <div class="segment-grid" id="simulatorSegments"></div>
+            <div class="simulator-main">
+              <div class="fit-summary" id="fitCard"></div>
+              <div class="simulator-segments" id="simulatorSegments"></div>
             </div>
           </div>
         </section>
 
-        <section class="section map-section" id="map">
-          <div class="section-header">
-            <p class="section-kicker">Mapa de tension</p>
-            <h2>Precio sensible vs seguridad economica</h2>
-            <p class="section-copy">
-              Cada punto es una persona. Cuanto mas a la derecha, mas sensible
-              al precio; cuanto mas arriba, mayor margen economico percibido.
-            </p>
+        <section class="editorial-section map-section" id="map">
+          <div class="map-header">
+            <div class="section-intro narrow">
+              <p class="eyebrow">Mapa de tension</p>
+              <h2>Quien te va a decir "es caro" y quien te da mas margen</h2>
+              <p>
+                Cada punto representa una persona de la muestra. Cuanto mas a la
+                derecha, mas pesa el precio. Cuanto mas arriba, mayor margen
+                economico percibido.
+              </p>
+            </div>
+            <div class="map-legend" id="decisionStyles"></div>
           </div>
 
-          <div class="map-layout">
-            <div class="plot-card">
-              <div class="plot-label plot-label-x">Mas sensibilidad al precio</div>
-              <div class="plot-label plot-label-y">Mas seguridad economica</div>
-              <div class="scatter-plot" id="scatterPlot"></div>
-            </div>
-            <div class="style-list" id="decisionStyles"></div>
+          <div class="plot-card">
+            <div class="plot-label plot-label-y">Mas seguridad economica</div>
+            <div class="plot-label plot-label-x">Mas sensibilidad al precio</div>
+            <div class="scatter-plot" id="scatterPlot"></div>
           </div>
         </section>
 
-        <section class="section persona-section" id="personas">
-          <div class="section-header">
-            <p class="section-kicker">Biblioteca de personas</p>
-            <h2>Filtra los perfiles que mas te interesa observar</h2>
-            <p class="section-copy">
-              Usa estos filtros para centrarte en quien mas probablemente te
-              diga "es caro" y quien necesita otra narrativa para aceptar el
-              precio.
+        <section class="editorial-section persona-section" id="personas">
+          <div class="section-intro">
+            <p class="eyebrow">Personas accionables</p>
+            <h2>Perfiles a observar antes de elegir local, surtido y mensaje</h2>
+            <p>
+              Aqui no solo ves demografia. Ves a quien convencer primero, quien
+              necesita precios visibles y quien puede aceptar una propuesta mas
+              aspiracional si la experiencia esta bien resuelta.
             </p>
           </div>
 
-          <div class="filter-bar">
+          <div class="filter-ribbon">
             <label class="filter-field">
-              <span>Ingresos</span>
+              <span>Ingreso</span>
               <select id="incomeFilter"></select>
             </label>
             <label class="filter-field">
-              <span>Decision</span>
+              <span>Criterio de decision</span>
               <select id="decisionFilter"></select>
             </label>
-            <label class="filter-field filter-field-wide" for="sensitivityFilter">
+            <label class="filter-field" for="sensitivityFilter">
               <span>
-                Sensibilidad minima al precio
+                Sensibilidad minima
                 <strong id="sensitivityFilterValue">0%</strong>
               </span>
               <input
@@ -176,7 +217,7 @@
 
       <footer class="footer">
         <p>
-          Sample elaborado a partir del dataset original
+          Muestra elaborada a partir del dataset original
           <a
             href="https://huggingface.co/datasets/apol/spain-reference-personas-frontier"
             target="_blank"
