@@ -1,39 +1,48 @@
-# Spain Reference Personas Sample
+# FrutaFit (Spain Reference Personas Sample)
 
-Página estática para explorar el job to be done:
+Pagina estatica para aterrizar el job to be done:
 
 > Evaluar si mi precio encaja con este tipo de cliente
 
-La web transforma un sample de personas en una lectura visual de negocio con:
+En este repositorio lo aterrizamos a un caso concreto: quieres abrir una franquicia de fruta y necesitas decidir donde empezar, como fijar un precio medio razonable y que mensaje usar para no parecer "caro".
 
-- métricas agregadas sobre sensibilidad al precio
-- insights rápidos para interpretar el mercado
-- un simulador heurístico de encaje de precio
-- un mapa visual de tensión entre precio y seguridad económica
-- una biblioteca filtrable de personas
-
-El sample de este repositorio se ha elaborado a partir del dataset original:
+El dataset de este repositorio es una muestra elaborada a partir del original:
 [Spain Reference Personas Frontier](https://huggingface.co/datasets/apol/spain-reference-personas-frontier)
+
+## Que incluye
+
+- Metric as agregadas sobre sensibilidad al precio
+- Recomendaciones por tipo de zona (urbano/suburbano/rural)
+- Simulador heuristico de precio medio vs claridad de valor
+- Mapa de ubicaciones (OpenStreetMap) para guardar posibles locales
+- Biblioteca filtrable de personas
 
 ## Estructura
 
-- [index.html](C:/Users/gerar/Documents/spainReferencePersonas/index.html): estructura de la página
-- [styles.css](C:/Users/gerar/Documents/spainReferencePersonas/styles.css): estilos y layout
-- [app.js](C:/Users/gerar/Documents/spainReferencePersonas/app.js): carga del dataset, cálculos y render dinámico
-- [persons.json](C:/Users/gerar/Documents/spainReferencePersonas/persons.json): sample local de personas
+- `index.html`: estructura de la pagina
+- `styles.css`: estilos
+- `app.js`: carga de `persons.json`, calculos y render dinamico
+- `persons.json`: muestra local de personas
+- `favicon.svg`: favicon
 
-## Cómo funciona
+## Mapa (OpenStreetMap)
 
-La página carga `persons.json` al abrirse y recalcula automáticamente:
+La seccion **Ubicacion** usa Leaflet + OpenStreetMap.
 
-- el número de personas analizadas
-- las métricas agregadas
-- los insights
-- el simulador de encaje
-- el gráfico de dispersión
-- las tarjetas de personas
+- Haz clic en el mapa para soltar un marcador (rellena `lat/lng`)
+- "Usar mi ubicacion" intenta detectar tu posicion (si das permiso)
+- "Guardar marcador" guarda nombre/notas/coords en el navegador (localStorage)
+- "Copiar coords" copia `lat, lng` al portapapeles
+- "Borrar marcadores" elimina todos los guardados
 
-Si añades más entradas al array `personas` dentro de `persons.json`, la página se actualizará automáticamente al recargar.
+### Tipo de zona (estimado)
+
+Al elegir un punto, la pagina intenta estimar si es una zona `urbana`, `suburbana` o `rural` usando geocodificacion inversa de OpenStreetMap (Nominatim) y una heuristica.
+
+Notas:
+
+- Si Nominatim falla o limita peticiones, el campo puede quedar como "No disponible" o "Sin datos".
+- El estado "Calculando..." es normal mientras resuelve la ubicacion.
 
 ## Formato esperado del dataset
 
@@ -65,13 +74,13 @@ Cada persona debe mantener la misma estructura base. Ejemplo:
 
 Notas:
 
-- Los valores numéricos como `priceSensitivity`, `trustLevel` o `economicSecurity` se esperan entre `0` y `1`.
-- El archivo debe seguir siendo un JSON válido.
-- La página ya corrige internamente el typo `Uban` a `Urban` al renderizar.
+- Los valores numericos como `priceSensitivity`, `trustLevel` o `economicSecurity` se esperan entre `0` y `1`.
+- El archivo debe seguir siendo un JSON valido.
+- La pagina corrige internamente el typo `Uban` a `Urban` al renderizar.
 
 ## Ejecutarlo en local
 
-Puedes abrir `index.html` directamente, pero para una experiencia más fiable conviene servirlo con un servidor estático.
+Abrir `index.html` directamente puede fallar al cargar JSON segun el navegador. Lo mas fiable es servirlo con un servidor estatico.
 
 Ejemplo con Python:
 
@@ -87,30 +96,20 @@ http://localhost:8000
 
 ## Despliegue en GitHub Pages
 
-1. Sube el contenido del repositorio a GitHub.
+1. Sube el repo a GitHub.
 2. Ve a `Settings > Pages`.
-3. En `Build and deployment`, selecciona `Deploy from a branch`.
+3. Selecciona `Deploy from a branch`.
 4. Elige la rama principal y la carpeta `/ (root)`.
-5. Guarda los cambios.
 
-GitHub Pages servirá directamente:
+GitHub Pages servira directamente:
 
 - `index.html`
 - `styles.css`
 - `app.js`
 - `persons.json`
 
-## Personalización rápida
-
-Puedes adaptar la página fácilmente si quieres:
-
-- cambiar los textos del hero para enfocarlos a otro JTBD
-- ajustar la heurística del simulador en [app.js](C:/Users/gerar/Documents/spainReferencePersonas/app.js:503)
-- modificar colores y layout en [styles.css](C:/Users/gerar/Documents/spainReferencePersonas/styles.css)
-- sustituir el sample local por un dataset más grande
-
 ## Limitaciones
 
-- El simulador no es predictivo ni estadísticamente validado; es una herramienta orientativa.
-- La calidad de la lectura depende totalmente de la calidad del sample incluido en `persons.json`.
-- Si cambias la forma del JSON, habrá que adaptar la lógica de render.
+- El simulador no es predictivo ni estadisticamente validado: es orientativo.
+- La lectura depende de la calidad de la muestra en `persons.json`.
+- La estimacion de zona usa una heuristica y puede equivocarse.
