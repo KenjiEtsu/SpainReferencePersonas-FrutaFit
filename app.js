@@ -17,6 +17,17 @@ const refs = {
   metricsGrid: document.getElementById("metricsGrid"),
   territoryBoard: document.getElementById("territoryBoard"),
   insightGrid: document.getElementById("insightGrid"),
+  locationMap: document.getElementById("locationMap"),
+  useMyLocation: document.getElementById("useMyLocation"),
+  clearLocations: document.getElementById("clearLocations"),
+  locationForm: document.getElementById("locationForm"),
+  locationName: document.getElementById("locationName"),
+  locationAreaType: document.getElementById("locationAreaType"),
+  locationNotes: document.getElementById("locationNotes"),
+  locationLat: document.getElementById("locationLat"),
+  locationLng: document.getElementById("locationLng"),
+  copyCoords: document.getElementById("copyCoords"),
+  locationList: document.getElementById("locationList"),
   fitCard: document.getElementById("fitCard"),
   simulatorSegments: document.getElementById("simulatorSegments"),
   scatterPlot: document.getElementById("scatterPlot"),
@@ -80,8 +91,22 @@ const styleColors = {
   quality_balanced: "#495e97",
 };
 
+const LOCATION_STORAGE_KEY = "frutafit_locations_v1";
+const locationState = {
+  map: null,
+  markersLayer: null,
+  draftMarker: null,
+  draftAreaType: "",
+  reverseGeocodeTimer: null,
+  reverseGeocodeAbort: null,
+  reverseGeocodeCache: new Map(),
+  reverseGeocodeRequestId: 0,
+  items: [],
+};
+
 async function init() {
   bindEvents();
+  initLocationUI();
 
   try {
     const response = await fetch("./persons.json");
@@ -131,6 +156,428 @@ function bindEvents() {
     refs.valueProofValue.textContent = `${state.simulator.valueProof}/100`;
     renderSimulator();
   });
+}
+
+function initLocationUI() {
+  if (!refs.locationMap || !refs.locationList) {
+    return;
+  }
+
+  loadLocations();
+  renderLocationList();
+
+  if (refs.locationForm) {
+    refs.locationForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      saveLocationFromForm();
+    });
+  }
+
+  if (refs.copyCoords) {
+    refs.copyCoords.addEventListener("click", () => {
+      const lat = Number(refs.locationLat?.value);
+      const lng = Number(refs.locationLng?.value);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        setStatus("Rellena lat y lng para copiar coordenadas.", false);
+        return;
+      }
+      copyToClipboard(`${lat.toFixed(6)}, ${lng.toFixed(6)}`);
+    });
+  }
+
+  if (refs.useMyLocation) {
+    refs.useMyLocation.addEventListener("click", () => {
+      if (!navigator.geolocation) {
+        setStatus("Tu navegador no soporta geolocalizacion.", false);
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setDraftLocation(lat, lng, true);
+          setStatus("Ubicacion detectada. Puedes guardar el marcador.", true);
+        },
+        () => setStatus("No se pudo obtener tu ubicacion (permiso denegado o error).", false),
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    });
+  }
+
+  if (refs.clearLocations) {
+    refs.clearLocations.addEventListener("click", () => {
+      locationState.items = [];
+      persistLocations();
+      syncLocationMarkers();
+      renderLocationList();
+      setStatus("Marcadores borrados.", true);
+    });
+  }
+
+  refs.locationList.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+
+    const id = target.getAttribute("data-location-id");
+    if (!id) return;
+
+    if (target.matches("[data-action='goto']")) {
+      const item = locationState.items.find((x) => x.id === id);
+      if (item) {
+        focusLocation(item);
+      }
+    }
+
+    if (target.matches("[data-action='delete']")) {
+      locationState.items = locationState.items.filter((x) => x.id !== id);
+      persistLocations();
+      syncLocationMarkers();
+      renderLocationList();
+    }
+  });
+
+  initLeafletMap();
+}
+
+function initLeafletMap() {
+  if (!refs.locationMap) return;
+
+  // Leaflet is loaded via CDN and attached to window as L.
+  const L = window.L;
+  if (!L) {
+    refs.locationList.innerHTML = `<div class="empty-state">No se pudo cargar el mapa (Leaflet).</div>`;
+    return;
+  }
+
+  const initial = { lat: 40.4168, lng: -3.7038, zoom: 6 };
+
+  const map = L.map(refs.locationMap, {
+    zoomControl: true,
+    scrollWheelZoom: true,
+  }).setView([initial.lat, initial.lng], initial.zoom);
+
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+  }).addTo(map);
+
+  const markersLayer = L.layerGroup().addTo(map);
+
+  locationState.map = map;
+  locationState.markersLayer = markersLayer;
+
+  map.on("click", (e) => {
+    setDraftLocation(e.latlng.lat, e.latlng.lng, false);
+  });
+
+  syncLocationMarkers();
+
+  if (locationState.items.length) {
+    const last = locationState.items[0];
+    focusLocation(last, { openPopup: false });
+  }
+}
+
+function setDraftLocation(lat, lng, centerMap) {
+  if (refs.locationLat) refs.locationLat.value = String(round6(lat));
+  if (refs.locationLng) refs.locationLng.value = String(round6(lng));
+  scheduleReverseGeocode(lat, lng);
+
+  const L = window.L;
+  if (!L || !locationState.map) return;
+
+  if (!locationState.draftMarker) {
+    locationState.draftMarker = L.marker([lat, lng], { opacity: 0.85 }).addTo(locationState.map);
+  } else {
+    locationState.draftMarker.setLatLng([lat, lng]);
+  }
+
+  if (centerMap) {
+    locationState.map.setView([lat, lng], Math.max(locationState.map.getZoom(), 14), { animate: true });
+  }
+}
+
+function saveLocationFromForm() {
+  const lat = Number(refs.locationLat?.value);
+  const lng = Number(refs.locationLng?.value);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    setStatus("Necesitas lat y lng para guardar un marcador.", false);
+    return;
+  }
+
+  const name = (refs.locationName?.value || "").trim();
+  const areaTypeRaw = String(refs.locationAreaType?.value || "").trim();
+  const areaType = areaTypeRaw === "Calculando..." ? "" : areaTypeRaw;
+  const notes = (refs.locationNotes?.value || "").trim();
+
+  const item = {
+    id: cryptoRandomId(),
+    name: name || "Ubicacion guardada",
+    notes,
+    areaType: areaType || locationState.draftAreaType || "",
+    lat: round6(lat),
+    lng: round6(lng),
+    createdAt: Date.now(),
+  };
+
+  locationState.items = [item, ...locationState.items].slice(0, 30);
+  persistLocations();
+  syncLocationMarkers();
+  renderLocationList();
+  focusLocation(item);
+}
+
+function focusLocation(item, options) {
+  const { openPopup = true } = options || {};
+
+  if (refs.locationLat) refs.locationLat.value = String(round6(item.lat));
+  if (refs.locationLng) refs.locationLng.value = String(round6(item.lng));
+  if (refs.locationName) refs.locationName.value = item.name || "";
+  if (refs.locationNotes) refs.locationNotes.value = item.notes || "";
+  if (refs.locationAreaType) refs.locationAreaType.value = item.areaType || "";
+
+  const L = window.L;
+  if (!L || !locationState.map) return;
+
+  locationState.map.setView([item.lat, item.lng], Math.max(locationState.map.getZoom(), 14), { animate: true });
+
+  if (openPopup && locationState.markersLayer) {
+    locationState.markersLayer.eachLayer((layer) => {
+      if (!layer.getLatLng) return;
+      const ll = layer.getLatLng();
+      if (Math.abs(ll.lat - item.lat) < 1e-6 && Math.abs(ll.lng - item.lng) < 1e-6) {
+        layer.openPopup?.();
+      }
+    });
+  }
+}
+
+function syncLocationMarkers() {
+  const L = window.L;
+  if (!L || !locationState.markersLayer) return;
+
+  locationState.markersLayer.clearLayers();
+
+  locationState.items.forEach((item) => {
+    const marker = L.marker([item.lat, item.lng]);
+    const notes = item.notes ? `<div style="margin-top:6px; color:#554d44;">${escapeHtml(item.notes)}</div>` : "";
+    const typeLine = item.areaType
+      ? `<div style="margin-top:6px; color:#554d44;">Tipo: ${escapeHtml(item.areaType)}</div>`
+      : "";
+    marker.bindPopup(
+      `<strong>${escapeHtml(item.name)}</strong><div style="margin-top:6px; color:#554d44;">${item.lat.toFixed(
+        6
+      )}, ${item.lng.toFixed(6)}</div>${notes}`
+    );
+    if (typeLine) {
+      marker.setPopupContent(
+        `<strong>${escapeHtml(item.name)}</strong><div style="margin-top:6px; color:#554d44;">${item.lat.toFixed(
+          6
+        )}, ${item.lng.toFixed(6)}</div>${typeLine}${notes}`
+      );
+    }
+    marker.addTo(locationState.markersLayer);
+  });
+}
+
+function renderLocationList() {
+  if (!refs.locationList) return;
+
+  if (!locationState.items.length) {
+    refs.locationList.innerHTML = `<div class="empty-state">Aun no hay marcadores guardados.</div>`;
+    return;
+  }
+
+  refs.locationList.innerHTML = locationState.items
+    .map((item) => {
+      const meta = `${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}`;
+      const notes = item.notes ? item.notes : "Sin notas.";
+      const type = item.areaType ? ` · ${item.areaType}` : "";
+      return `
+        <div class="location-item">
+          <strong>${escapeHtml(item.name)}</strong>
+          <small>${escapeHtml(meta)}${escapeHtml(type)} · ${escapeHtml(notes)}</small>
+          <div class="location-item-actions">
+            <button class="button button-secondary" type="button" data-action="goto" data-location-id="${item.id}">
+              Ir
+            </button>
+            <button class="button button-secondary" type="button" data-action="delete" data-location-id="${item.id}">
+              Borrar
+            </button>
+          </div>
+        </div>
+      `;
+    })
+    .join("");
+}
+
+function loadLocations() {
+  try {
+    const raw = localStorage.getItem(LOCATION_STORAGE_KEY);
+    if (!raw) {
+      locationState.items = [];
+      return;
+    }
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      locationState.items = [];
+      return;
+    }
+    locationState.items = parsed
+      .filter((x) => x && typeof x === "object")
+      .map((x) => ({
+        id: String(x.id || cryptoRandomId()),
+        name: String(x.name || "Ubicacion guardada"),
+        notes: String(x.notes || ""),
+        areaType: String(x.areaType || ""),
+        lat: round6(Number(x.lat)),
+        lng: round6(Number(x.lng)),
+        createdAt: Number(x.createdAt || Date.now()),
+      }))
+      .filter((x) => Number.isFinite(x.lat) && Number.isFinite(x.lng))
+      .slice(0, 30);
+  } catch {
+    locationState.items = [];
+  }
+}
+
+function persistLocations() {
+  try {
+    localStorage.setItem(LOCATION_STORAGE_KEY, JSON.stringify(locationState.items));
+  } catch {
+    // ignore storage failures (private mode, quota, etc.)
+  }
+}
+
+function copyToClipboard(value) {
+  if (!navigator.clipboard || !navigator.clipboard.writeText) {
+    setStatus("No se pudo copiar (clipboard no disponible).", false);
+    return;
+  }
+  navigator.clipboard
+    .writeText(value)
+    .then(() => setStatus("Coordenadas copiadas.", true))
+    .catch(() => setStatus("No se pudo copiar al portapapeles.", false));
+}
+
+function round6(n) {
+  return Math.round(n * 1e6) / 1e6;
+}
+
+function cryptoRandomId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function scheduleReverseGeocode(lat, lng) {
+  if (!refs.locationAreaType) return;
+
+  if (locationState.reverseGeocodeTimer) {
+    clearTimeout(locationState.reverseGeocodeTimer);
+  }
+
+  refs.locationAreaType.value = "Calculando...";
+
+  locationState.reverseGeocodeTimer = setTimeout(() => {
+    reverseGeocodeAndClassify(lat, lng);
+  }, 350);
+}
+
+async function reverseGeocodeAndClassify(lat, lng) {
+  if (!refs.locationAreaType) return;
+
+  const requestId = ++locationState.reverseGeocodeRequestId;
+  const cacheKey = `${round3(lat)},${round3(lng)}`;
+  if (locationState.reverseGeocodeCache.has(cacheKey)) {
+    const cached = locationState.reverseGeocodeCache.get(cacheKey);
+    locationState.draftAreaType = cached || "";
+    refs.locationAreaType.value = cached || "Sin datos";
+    return;
+  }
+
+  try {
+    if (locationState.reverseGeocodeAbort) {
+      locationState.reverseGeocodeAbort.abort();
+    }
+    const controller = new AbortController();
+    locationState.reverseGeocodeAbort = controller;
+
+    const url =
+      "https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=es" +
+      `&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}`;
+    const res = await fetch(url, { signal: controller.signal, headers: { Accept: "application/json" } });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+    const payload = await res.json();
+    const areaType = inferAreaTypeFromNominatim(payload);
+
+    // Ignore late responses when user already clicked somewhere else.
+    if (requestId !== locationState.reverseGeocodeRequestId) {
+      return;
+    }
+
+    locationState.reverseGeocodeCache.set(cacheKey, areaType || "");
+    locationState.draftAreaType = areaType || "";
+    refs.locationAreaType.value = areaType || "Sin datos";
+  } catch (err) {
+    // If this was aborted because the user clicked elsewhere, keep the pending state there.
+    if (err && typeof err === "object" && err.name === "AbortError") {
+      return;
+    }
+
+    if (requestId !== locationState.reverseGeocodeRequestId) {
+      return;
+    }
+
+    locationState.draftAreaType = "";
+    refs.locationAreaType.value = "No disponible";
+  }
+}
+
+function inferAreaTypeFromNominatim(payload) {
+  if (!payload || typeof payload !== "object") return "";
+  const address = payload.address && typeof payload.address === "object" ? payload.address : {};
+
+  // Heuristic:
+  // - urbana: city / city_district / neighbourhood / suburb inside a city context
+  // - suburbana: town / suburb / residential / neighbourhood without explicit city
+  // - rural: village / hamlet / isolated localities, farms, etc.
+  const hasCity = Boolean(address.city || address.city_district);
+  const hasSuburb = Boolean(address.suburb || address.neighbourhood || address.quarter);
+  const hasTown = Boolean(address.town);
+  const hasVillage = Boolean(address.village || address.hamlet || address.locality);
+
+  const kind = String(payload.type || "");
+  const cls = String(payload.class || "");
+
+  if (hasCity) {
+    return "urbana";
+  }
+
+  if (hasSuburb) {
+    return "suburbana";
+  }
+
+  if (hasTown) {
+    return "suburbana";
+  }
+
+  if (hasVillage) {
+    return "rural";
+  }
+
+  if (cls === "landuse" && (kind === "farm" || kind === "farmland" || kind === "forest")) {
+    return "rural";
+  }
+
+  return "";
+}
+
+function round3(n) {
+  return Math.round(n * 1e3) / 1e3;
 }
 
 function normalizePersona(persona) {

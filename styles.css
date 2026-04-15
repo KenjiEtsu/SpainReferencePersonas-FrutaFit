@@ -261,6 +261,8 @@ h3 {
   border-radius: 999px;
   text-decoration: none;
   font-weight: 800;
+  border: 0;
+  cursor: pointer;
   transition:
     transform 180ms ease,
     background-color 180ms ease,
@@ -284,6 +286,115 @@ h3 {
 .button-secondary {
   background: rgba(255, 255, 255, 0.5);
   border: 1px solid rgba(21, 19, 15, 0.08);
+}
+
+.location-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.location-map-shell {
+  display: grid;
+  gap: 10px;
+}
+
+.location-map {
+  width: 100%;
+  height: 460px;
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1px solid rgba(18, 15, 11, 0.08);
+  box-shadow: var(--shadow-soft);
+}
+
+.location-hint {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.location-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.location-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.location-form {
+  display: grid;
+  gap: 12px;
+}
+
+.location-form label {
+  display: grid;
+  gap: 8px;
+}
+
+.location-form input,
+.location-form textarea {
+  width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(18, 15, 11, 0.12);
+  background: rgba(255, 255, 255, 0.78);
+  padding: 10px 12px;
+  color: var(--ink);
+}
+
+.location-form input[readonly] {
+  background: rgba(255, 255, 255, 0.58);
+  color: var(--muted);
+}
+
+.location-form textarea {
+  resize: vertical;
+}
+
+.location-coords {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.location-submit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.location-list {
+  display: grid;
+  gap: 10px;
+}
+
+.location-item {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(18, 15, 11, 0.06);
+}
+
+.location-item strong {
+  display: block;
+}
+
+.location-item small {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.location-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
 }
 
 .hero-brief {
@@ -1021,6 +1132,10 @@ input[type="range"] {
   .map-header {
     grid-template-columns: 1fr;
   }
+
+  .location-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 760px) {
@@ -1080,6 +1195,10 @@ input[type="range"] {
 
   .scatter-plot {
     min-height: 430px;
+  }
+
+  .location-map {
+    height: 380px;
   }
 
   .bar-row {

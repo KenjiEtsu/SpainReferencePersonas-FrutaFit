@@ -15,7 +15,19 @@
       rel="stylesheet"
     />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
     <link rel="stylesheet" href="./styles.css" />
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+      defer
+    ></script>
     <script src="./app.js" defer></script>
   </head>
   <body>
@@ -83,6 +95,73 @@
             <h2>Que pinta tiene el mercado de entrada</h2>
           </div>
           <div class="overview-metrics" id="metricsGrid"></div>
+        </section>
+
+        <section class="editorial-section location-section" id="location">
+          <div class="section-intro">
+            <p class="eyebrow">Ubicacion</p>
+            <h2>Marca posibles locales en el mapa</h2>
+            <p>
+              Guarda ubicaciones candidatas, copia coordenadas y vuelve luego a
+              compararlas con el simulador de precio.
+            </p>
+          </div>
+
+          <div class="location-grid">
+            <div class="location-map-shell">
+              <div class="location-map" id="locationMap" aria-label="Mapa de ubicacion"></div>
+              <div class="location-hint">
+                Consejo: haz clic en el mapa para soltar un marcador. Tambien puedes usar tu ubicacion.
+              </div>
+            </div>
+
+            <div class="location-panel">
+              <div class="location-actions">
+                <button class="button button-secondary" type="button" id="useMyLocation">
+                  Usar mi ubicacion
+                </button>
+                <button class="button button-secondary" type="button" id="clearLocations">
+                  Borrar marcadores
+                </button>
+              </div>
+
+              <form class="location-form" id="locationForm">
+                <label>
+                  <span>Nombre (opcional)</span>
+                  <input id="locationName" type="text" placeholder="Ej: Local cerca del metro" />
+                </label>
+                <label>
+                  <span>Tipo de zona (estimado)</span>
+                  <input
+                    id="locationAreaType"
+                    type="text"
+                    placeholder="Se calcula al marcar en el mapa"
+                    readonly
+                  />
+                </label>
+                <label>
+                  <span>Notas (opcional)</span>
+                  <textarea id="locationNotes" rows="3" placeholder="Ej: Mucho paso, zona residencial, etc."></textarea>
+                </label>
+                <div class="location-coords">
+                  <label>
+                    <span>Lat</span>
+                    <input id="locationLat" type="number" step="0.000001" placeholder="40.4168" />
+                  </label>
+                  <label>
+                    <span>Lng</span>
+                    <input id="locationLng" type="number" step="0.000001" placeholder="-3.7038" />
+                  </label>
+                </div>
+                <div class="location-submit">
+                  <button class="button button-primary" type="submit">Guardar marcador</button>
+                  <button class="button button-secondary" type="button" id="copyCoords">Copiar coords</button>
+                </div>
+              </form>
+
+              <div class="location-list" id="locationList"></div>
+            </div>
+          </div>
         </section>
 
         <section class="editorial-section" id="territories">
